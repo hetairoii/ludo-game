@@ -19,38 +19,72 @@ NEGRO = (0, 0, 0)
 GRIS = (200, 200, 200)
 
 # Definición de variables
-COLORES = [ROJO, VERDE, AMARILLO, AZUL]
+COLORES = [ROJO, VERDE, AZUL, AMARILLO]
 CASAS = {
     ROJO: (75, 75),
     VERDE: (WIDTH - 175, 75),
-    AMARILLO: (75, HEIGHT - 175),
-    AZUL: (WIDTH - 175, HEIGHT - 175)
+    AZUL: (WIDTH - 175, HEIGHT - 175),
+    AMARILLO: (75, HEIGHT - 175)
 }
 
 cell_size = 40
 
-# Definir el camino principal (simplificado, 52 casillas)
+# Definir el camino principal (72 casillas: 52 comunes + 5 home por color + 1 meta por color)
 camino = []
+
+# --- Camino común (52 casillas) ---
 # Arriba (de izquierda a derecha)
-for x in range(250, 350, cell_size):
-    camino.append((x + 20, 230))
-for y in range(230, 10, -cell_size):
-    camino.append((350, y))
+for x in range(10, 250, cell_size):  # 6 casillas horizontales
+    camino.append((x, 270))
+# Bajada derecha (de arriba a abajo)
+for y in range(230, 10, -cell_size):  # 5 casillas verticales
+    camino.append((270, y))
+
+camino.append((300, 15)) #entrada a home path verde
+
 # Derecha (de arriba a abajo)
-for x in range(350, 570, cell_size):
-    camino.append((x, 10))
-for y in range(10, 230, cell_size):
-    camino.append((570, y))
-# Abajo (de derecha a izquierda)
-for x in range(570, 350, -cell_size):
-    camino.append((x, 230))
-for y in range(230, 450, cell_size):
-    camino.append((350, y))
+for y in range(15, 230, cell_size):  # 6 casillas verticales
+    camino.append((340, y))
+# Arriba (de izquierda a derecha)
+for x in range(380, 600, cell_size):  # 6 casillas horizontales
+    camino.append((x, 270))
+
+camino.append((580, 300)) #entrada a home path azul
+
+# Bajada abajo (de derecha a izquierda)
+for x in range(580, 340, -cell_size):  # 6 casillas horizontales
+    camino.append((x, 340))
 # Izquierda (de abajo a arriba)
-for x in range(350, 130, -cell_size):
-    camino.append((x, 450))
-for y in range(450, 230, -cell_size):
-    camino.append((130, y))
+for y in range(380, 600, cell_size):  # 6 casillas verticales
+    camino.append((340, y))
+
+camino.append((300, 580)) #entrada a home path amarillo
+
+# Arriba izquierda (de abajo a arriba)
+for y in range(580, 340, -cell_size):  # 6 casillas verticales
+    camino.append((270, y))
+# Subida izquierda (de derecha a izquierda)
+for x in range(230, 10, -cell_size):  # 4 casillas horizontales
+    camino.append((x, 340))
+
+camino.append((10, 300)) #entrada a home path rojo
+
+# --- Home paths (5 casillas por color) ---
+# ROJO (de la casilla de entrada a la meta)
+home_rojo = [(250 + i * cell_size, 270) for i in range(1, 6)]
+# VERDE
+home_verde = [(470, 250 - i * cell_size) for i in range(1, 6)]
+# AMARILLO
+home_amarillo = [(250 - i * cell_size, 470) for i in range(1, 6)]
+# AZUL
+home_azul = [(270, 250 + i * cell_size) for i in range(1, 6)]
+
+# Añadir home paths al camino (en orden ROJO, VERDE, AMARILLO, AZUL)
+camino += home_rojo + home_verde + home_amarillo + home_azul
+
+# --- Meta (centro) ---
+meta = (WIDTH // 2, HEIGHT // 2)
+camino += [meta] * 4  # Una meta para cada color
 
 # Posiciones iniciales de las fichas (4 por jugador)
 fichas = {
@@ -64,24 +98,24 @@ fichas = {
 estado_fichas = {
     ROJO: [-1, -1, -1, -1],
     VERDE: [-1, -1, -1, -1],
-    AMARILLO: [-1, -1, -1, -1],
-    AZUL: [-1, -1, -1, -1]
+    AZUL: [-1, -1, -1, -1],
+    AMARILLO: [-1, -1, -1, -1]
 }
 
 # Índice de inicio para cada color en el camino
 inicio_camino = {
     ROJO: 0,
     VERDE: 13,
-    AMARILLO: 26,
-    AZUL: 39
+    AZUL: 26,
+    AMARILLO: 39
 }
 
 # Casillas de home (camino al centro) para cada color
 home_paths = {
     ROJO: [(250 + cell_size, 230 - i * cell_size) for i in range(1, 6)],
     VERDE: [(350 + i * cell_size, 10 + cell_size) for i in range(1, 6)],
-    AMARILLO: [(350 - cell_size, 450 + i * cell_size) for i in range(1, 6)],
-    AZUL: [(130 - i * cell_size, 350 - cell_size) for i in range(1, 6)]
+    AZUL: [(350 - cell_size, 450 + i * cell_size) for i in range(1, 6)],
+    AMARILLO: [(130 - i * cell_size, 350 - cell_size) for i in range(1, 6)]
 }
 
 j_actual = 0
@@ -125,7 +159,7 @@ def draw_board():
     pygame.draw.rect(screen, AZUL, (350, 350, 250, 250))
     pygame.draw.rect(screen, BLANCO, (250, 250, 100, 100))  # Centro
 
-    # Caminos de cada lado (con casillas)
+    #Caminos de cada lado (con casillas)
     #Verde-Azul
     for i in range(6):
         rect = pygame.Rect(360 + i * cell_size, 250, cell_size, cell_size)
@@ -262,12 +296,17 @@ while running:
             if color == get_color_turno() and idx == ficha_seleccionada:
                 pygame.draw.circle(screen, NEGRO, pos, 22, 3)
 
-    # Dibujar valor del dado y turno
+    # Dibujar valor del dado y turno SIEMPRE centrado
     fuente = pygame.font.Font(None, 36)
     text = fuente.render(f"Dado: {dado_val}", True, NEGRO)
-    screen.blit(text, (WIDTH // 2 - 50, HEIGHT // 2 - 18))
-    turno_text = fuente.render(f"Turno: {['Rojo','Verde','Amarillo','Azul'][j_actual]}", True, COLORES[j_actual])
-    screen.blit(turno_text, (10, 10))
+    turno_text = fuente.render(f"Turno: {['Rojo','Verde','Azul','Amarillo'][j_actual]}", True, COLORES[j_actual])
+
+    # Obtener el rectángulo del texto para centrarlo
+    text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 20))
+    turno_rect = turno_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
+
+    screen.blit(text, text_rect)
+    screen.blit(turno_text, turno_rect)
 
     pygame.display.flip()
 
