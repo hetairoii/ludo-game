@@ -1,0 +1,57 @@
+# LUDO UCAB - Juego de Ludo en Pygame
+
+Este proyecto es una implementación del clásico juego de mesa **Ludo** usando Python y la librería **Pygame**. El código está diseñado para 4 jugadores (Rojo, Verde, Azul y Amarillo) y respeta las reglas tradicionales del juego, incluyendo la lógica de turnos, lanzamientos de dado y movimiento de fichas.
+
+## Características
+
+- **Tablero visual**: El tablero y las casas de cada color están dibujados con Pygame.
+- **Fichas**: Cada jugador tiene 4 fichas, que inician en su casa correspondiente.
+- **Camino principal y home**: El recorrido de las fichas sigue el camino clásico de Ludo, con 52 casillas comunes y 5 casillas de home por color.
+- **Lanzamiento de dado**:
+  - Solo se puede lanzar el dado una vez por turno, a menos que salga un seis.
+  - Si sale un seis, el jugador puede volver a lanzar. Si saca tres seises seguidos, pierde el turno automáticamente.
+  - Si el jugador no tiene fichas en el tablero y no saca un seis, pierde el turno automáticamente.
+- **Interfaz de usuario**:
+  - El valor del dado y el turno actual se muestran en la esquina inferior izquierda, sobre una caja de fondo gris claro con borde negro, que mantiene un tamaño mínimo para evitar que se achique.
+  - Cuando un jugador pierde el turno por no tener fichas fuera y no sacar seis, el valor del dado y el turno se muestran durante 1.2 segundos antes de pasar al siguiente jugador.
+- **Control de fichas**: Selección de fichas con el mouse y movimiento según el valor del dado.
+
+## Controles
+
+- **Espacio**: Lanzar el dado (si es tu turno y no hay dado pendiente).
+- **Enter**: Mover la ficha seleccionada (si hay un dado pendiente y una ficha seleccionada).
+- **Mouse**: Seleccionar una ficha propia para moverla.
+
+## Requisitos
+
+- Python 3.x
+- Pygame
+
+Instala pygame con:
+
+```sh
+pip install pygame
+```
+
+## Ejecución
+
+Ejecuta el archivo principal:
+
+```sh
+python game.py
+```
+
+## Estructura del código
+
+- **Tablero y fichas**: Se dibujan usando funciones de Pygame.
+- **Lógica de turnos**: Controlada por variables como `j_actual`, `dado_val`, `lanzamientos_seguidos` y `ultimo_seis`.
+- **Visualización**: El turno y el dado siempre aparecen en la esquina inferior izquierda, con un fondo que asegura buena visibilidad y tamaño constante.
+- **Reglas especiales**: Implementadas para el manejo de seises consecutivos y turnos perdidos por no tener fichas fuera.
+
+## Créditos
+
+Desarrollado para la materia de Redes en la UCAB.
+
+---
+
+¡Disfruta jugando Ludo en tu PC!
