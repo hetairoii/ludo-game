@@ -1,5 +1,6 @@
 import pygame
 import random
+import time
 
 # Inicializar juego
 pygame.init()
@@ -252,6 +253,10 @@ def draw_board():
     pygame.draw.circle(screen, BLANCO, (WIDTH // 2, HEIGHT // 2), 30)
     pygame.draw.circle(screen, NEGRO, (WIDTH // 2, HEIGHT // 2), 30, 2)
 
+# Variables para controlar los lanzamientos de dado por turno
+lanzamientos_seguidos = 0
+ultimo_seis = False
+
 running = True
 while running:
     screen.fill(BLANCO)
@@ -260,9 +265,48 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
+            if event.key == pygame.K_SPACE and dado_val == 0:
+                # Solo permite tirar si no hay dado pendiente
                 dado_val = random.randint(1, 6)
-                ficha_seleccionada = None  # Reset selección al tirar dado
+                if dado_val == 6:
+                    lanzamientos_seguidos += 1
+                    ultimo_seis = True
+                    if lanzamientos_seguidos == 3:
+                        # Pierde el turno si saca tres seises seguidos
+                        dado_val = 0
+                        lanzamientos_seguidos = 0
+                        ultimo_seis = False
+                        j_actual = (j_actual + 1) % 4
+                else:
+                    ultimo_seis = False
+
+                # Validar si no tiene fichas en el tablero y no sacó 6
+                color = get_color_turno()
+                fichas_fuera = any(f >= 0 for f in estado_fichas[color])
+                if not fichas_fuera and dado_val != 6:
+                    # Mostrar el dado por un momento antes de pasar turno
+                    draw_board()
+                    for color_draw in COLORES:
+                        for idx in range(4):
+                            pos = pos_en_casa(color_draw, idx) if estado_fichas[color_draw][idx] == -1 else pos_en_camino(color_draw, idx)
+                            pygame.draw.circle(screen, color_draw, pos, 18)
+                            pygame.draw.circle(screen, NEGRO, pos, 18, 2)
+                            if color_draw == get_color_turno() and idx == ficha_seleccionada:
+                                pygame.draw.circle(screen, NEGRO, pos, 22, 3)
+                    fuente = pygame.font.Font(None, 36)
+                    text = fuente.render(f"Dado: {dado_val}", True, NEGRO)
+                    turno_text = fuente.render(f"Turno: {['Rojo','Verde','Azul','Amarillo'][j_actual]}", True, COLORES[j_actual])
+                    text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 20))
+                    turno_rect = turno_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
+                    screen.blit(text, text_rect)
+                    screen.blit(turno_text, turno_rect)
+                    pygame.display.flip()
+                    pygame.time.wait(1200)  # Espera 1.2 segundos para mostrar el dado
+                    dado_val = 0
+                    lanzamientos_seguidos = 0
+                    ultimo_seis = False
+                    j_actual = (j_actual + 1) % 4
+
             elif event.key == pygame.K_RETURN and ficha_seleccionada is not None and dado_val > 0:
                 color = get_color_turno()
                 idx = ficha_seleccionada
@@ -275,11 +319,20 @@ while running:
                     # Si llega a home path
                     if estado_fichas[color][idx] > len(camino) + 5:
                         estado_fichas[color][idx] = len(camino) + 5  # No pasa del centro
-                # Cambiar turno si no sacó 6
-                if dado_val != 6:
+
+                # Control de turnos y lanzamientos
+                if dado_val == 6 and lanzamientos_seguidos < 3:
+                    # Puede volver a tirar, no cambia turno
+                    dado_val = 0
+                    ficha_seleccionada = None
+                else:
+                    # Cambia turno
                     j_actual = (j_actual + 1) % 4
-                dado_val = 0
-                ficha_seleccionada = None
+                    dado_val = 0
+                    lanzamientos_seguidos = 0
+                    ultimo_seis = False
+                    ficha_seleccionada = None
+
         elif event.type == pygame.MOUSEBUTTONDOWN and dado_val > 0:
             color = get_color_turno()
             ficha_seleccionada = seleccionar_ficha(event.pos, color)
