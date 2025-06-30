@@ -296,10 +296,20 @@ while running:
                     fuente = pygame.font.Font(None, 36)
                     text = fuente.render(f"Dado: {dado_val}", True, NEGRO)
                     turno_text = fuente.render(f"Turno: {['Rojo','Verde','Azul','Amarillo'][j_actual]}", True, COLORES[j_actual])
-                    text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 20))
-                    turno_rect = turno_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
-                    screen.blit(text, text_rect)
-                    screen.blit(turno_text, turno_rect)
+
+                    # Fondo y posiciones para la esquina inferior izquierda
+                    padding = 10
+                    ancho_minimo = 220  # Ajusta este valor si quieres una caja más ancha
+                    ancho = max(ancho_minimo, text.get_width(), turno_text.get_width()) + 2 * padding
+                    alto = text.get_height() + turno_text.get_height() + 3 * padding
+                    fondo_rect = pygame.Rect(0, HEIGHT - alto, ancho, alto)
+                    pygame.draw.rect(screen, (220, 220, 220), fondo_rect)  # Fondo gris claro
+                    pygame.draw.rect(screen, NEGRO, fondo_rect, 2)         # Borde negro
+                    text_pos = (padding, HEIGHT - alto + padding)
+                    turno_pos = (padding, HEIGHT - alto + text.get_height() + 2 * padding)
+                    screen.blit(text, text_pos)
+                    screen.blit(turno_text, turno_pos)
+
                     pygame.display.flip()
                     pygame.time.wait(1200)  # Espera 1.2 segundos para mostrar el dado
                     dado_val = 0
@@ -349,17 +359,27 @@ while running:
             if color == get_color_turno() and idx == ficha_seleccionada:
                 pygame.draw.circle(screen, NEGRO, pos, 22, 3)
 
-    # Dibujar valor del dado y turno SIEMPRE centrado
+    # --- NUEVO: Dado y turno en la esquina inferior izquierda con fondo ---
     fuente = pygame.font.Font(None, 36)
     text = fuente.render(f"Dado: {dado_val}", True, NEGRO)
     turno_text = fuente.render(f"Turno: {['Rojo','Verde','Azul','Amarillo'][j_actual]}", True, COLORES[j_actual])
 
-    # Obtener el rectángulo del texto para centrarlo
-    text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 20))
-    turno_rect = turno_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
+    # Calcular tamaño del fondo con un ancho mínimo fijo para evitar que la caja se achique
+    padding = 10
+    ancho_minimo = 220  # Puedes ajustar este valor según prefieras
+    ancho = max(ancho_minimo, text.get_width(), turno_text.get_width()) + 2 * padding
+    alto = text.get_height() + turno_text.get_height() + 3 * padding
 
-    screen.blit(text, text_rect)
-    screen.blit(turno_text, turno_rect)
+    fondo_rect = pygame.Rect(0, HEIGHT - alto, ancho, alto)
+    pygame.draw.rect(screen, (220, 220, 220), fondo_rect)  # Fondo gris claro
+    pygame.draw.rect(screen, NEGRO, fondo_rect, 2)         # Borde negro
+
+    # Posiciones para los textos
+    text_pos = (padding, HEIGHT - alto + padding)
+    turno_pos = (padding, HEIGHT - alto + text.get_height() + 2 * padding)
+
+    screen.blit(text, text_pos)
+    screen.blit(turno_text, turno_pos)
 
     pygame.display.flip()
 
