@@ -142,6 +142,7 @@ def pos_en_camino(color, idx_ficha):
     elif 52 <= idx <= 57:
         # Home path propio
         home_idx = idx - 52
+        print(home_paths[color][home_idx])
         return home_paths[color][home_idx]
     else:
         # Meta (centro)
@@ -259,6 +260,10 @@ def draw_board():
 lanzamientos_seguidos = 0
 ultimo_seis = False
 
+# NUEVO: Variables para mostrar mensaje de penalización
+mensaje_penalizacion = ""
+mostrar_mensaje_hasta = 0
+
 running = True
 while running:
     screen.fill(BLANCO)
@@ -267,18 +272,20 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and dado_val == 0:
-                # Solo permite tirar si no hay dado pendiente
-                dado_val = 6#random.randint(1, 6)
+            if event.key == pygame.K_SPACE and dado_val == 0 and not mensaje_penalizacion:
+                # Solo permite tirar si no hay dado pendiente ni mensaje de penalización activo
+                dado_val = 6 # random.randint(1, 6)
                 if dado_val == 6:
                     lanzamientos_seguidos += 1
                     ultimo_seis = True
                     if lanzamientos_seguidos == 3:
                         # Pierde el turno si saca tres seises seguidos
+                        mensaje_penalizacion = f"¡{['Rojo','Verde','Azul','Amarillo'][j_actual]} pierde turno por 3 seises!"
+                        mostrar_mensaje_hasta = pygame.time.get_ticks() + 1500  # 1.5 segundos
                         dado_val = 0
                         lanzamientos_seguidos = 0
                         ultimo_seis = False
-                        j_actual = (j_actual + 1) % 4
+                        # NO cambiar turno aquí, lo haremos después de mostrar el mensaje
                 else:
                     ultimo_seis = False
 
@@ -301,25 +308,25 @@ while running:
 
                     # Fondo y posiciones para la esquina inferior izquierda
                     padding = 10
-                    ancho_minimo = 220  # Ajusta este valor si quieres una caja más ancha
+                    ancho_minimo = 220
                     ancho = max(ancho_minimo, text.get_width(), turno_text.get_width()) + 2 * padding
                     alto = text.get_height() + turno_text.get_height() + 3 * padding
                     fondo_rect = pygame.Rect(0, HEIGHT - alto, ancho, alto)
-                    pygame.draw.rect(screen, (220, 220, 220), fondo_rect)  # Fondo gris claro
-                    pygame.draw.rect(screen, NEGRO, fondo_rect, 2)         # Borde negro
+                    pygame.draw.rect(screen, (220, 220, 220), fondo_rect)
+                    pygame.draw.rect(screen, NEGRO, fondo_rect, 2)
                     text_pos = (padding, HEIGHT - alto + padding)
                     turno_pos = (padding, HEIGHT - alto + text.get_height() + 2 * padding)
                     screen.blit(text, text_pos)
                     screen.blit(turno_text, turno_pos)
 
                     pygame.display.flip()
-                    pygame.time.wait(1200)  # Espera 1.2 segundos para mostrar el dado
+                    pygame.time.wait(1200)
                     dado_val = 0
                     lanzamientos_seguidos = 0
                     ultimo_seis = False
                     j_actual = (j_actual + 1) % 4
 
-            elif event.key == pygame.K_RETURN and ficha_seleccionada is not None and dado_val > 0:
+            elif event.key == pygame.K_RETURN and ficha_seleccionada is not None and dado_val > 0 and not mensaje_penalizacion:
                 color = get_color_turno()
                 idx = ficha_seleccionada
                 # Si la ficha está en casa y saca 6, sale
@@ -328,40 +335,44 @@ while running:
                 # Si la ficha está en el camino, avanza
                 elif estado_fichas[color][idx] >= 0:
                     nuevo_idx = estado_fichas[color][idx] + dado_val
-                    entrada_home = 51  # Siempre 51 pasos para llegar a la entrada de home desde el inicio de cada color
+                    entrada_home = 51
                     if estado_fichas[color][idx] <= 51 and nuevo_idx > 51:
-                        # Solo entra a home si está justo en la entrada de su color
                         if ((inicio_camino[color] + estado_fichas[color][idx]) % 52) == ((inicio_camino[color] + 51) % 52):
-                            # Entra a home path propio
                             estado_fichas[color][idx] = 52 + (nuevo_idx - 52)
                             if estado_fichas[color][idx] > 57:
-                                estado_fichas[color][idx] = 57  # No pasa del centro
+                                estado_fichas[color][idx] = 57
                         else:
-                            # Si no es su entrada a home, sigue el camino común
                             estado_fichas[color][idx] = (inicio_camino[color] + nuevo_idx) % 52
                     else:
-                        # Si ya está en home path o camino común normal
                         if nuevo_idx > 57:
-                            estado_fichas[color][idx] = 57  # No pasa del centro
+                            estado_fichas[color][idx] = 57
                         else:
                             estado_fichas[color][idx] = nuevo_idx
 
                 # Control de turnos y lanzamientos
                 if dado_val == 6 and lanzamientos_seguidos < 3:
-                    # Puede volver a tirar, no cambia turno
                     dado_val = 0
                     ficha_seleccionada = None
                 else:
-                    # Cambia turno
                     j_actual = (j_actual + 1) % 4
                     dado_val = 0
                     lanzamientos_seguidos = 0
                     ultimo_seis = False
                     ficha_seleccionada = None
 
-        elif event.type == pygame.MOUSEBUTTONDOWN and dado_val > 0:
+        elif event.type == pygame.MOUSEBUTTONDOWN and dado_val > 0 and not mensaje_penalizacion:
             color = get_color_turno()
             ficha_seleccionada = seleccionar_ficha(event.pos, color)
+
+    # --- Penalización por tres seises seguidos ---
+    if mensaje_penalizacion and pygame.time.get_ticks() >= mostrar_mensaje_hasta:
+        # Pasó el tiempo de mostrar el mensaje, cambia turno y limpia mensaje
+        j_actual = (j_actual + 1) % 4
+        mensaje_penalizacion = ""
+        dado_val = 0
+        lanzamientos_seguidos = 0
+        ultimo_seis = False
+        ficha_seleccionada = None
 
     draw_board()
 
@@ -371,31 +382,34 @@ while running:
             pos = pos_en_casa(color, idx) if estado_fichas[color][idx] == -1 else pos_en_camino(color, idx)
             pygame.draw.circle(screen, color, pos, 18)
             pygame.draw.circle(screen, NEGRO, pos, 18, 2)
-            # Resalta la ficha seleccionada
             if color == get_color_turno() and idx == ficha_seleccionada:
                 pygame.draw.circle(screen, NEGRO, pos, 22, 3)
 
-    # --- NUEVO: Dado y turno en la esquina inferior izquierda con fondo ---
+    # --- Dado, turno y mensaje en la esquina inferior izquierda con fondo ---
     fuente = pygame.font.Font(None, 36)
     text = fuente.render(f"Dado: {dado_val}", True, NEGRO)
     turno_text = fuente.render(f"Turno: {['Rojo','Verde','Azul','Amarillo'][j_actual]}", True, COLORES[j_actual])
+    mensaje_text = None
+    if mensaje_penalizacion:
+        fuente_mensaje = pygame.font.Font(None, 20)
+        mensaje_text = fuente_mensaje.render(mensaje_penalizacion, True, (200, 0, 0))
 
-    # Calcular tamaño del fondo con un ancho mínimo fijo para evitar que la caja se achique
+    # El área de las fichas amarillas es de 250x250 px (ver draw_board), así que el ancho fijo debe ser 250
     padding = 10
-    ancho_minimo = 220  # Puedes ajustar este valor según prefieras
-    ancho = max(ancho_minimo, text.get_width(), turno_text.get_width()) + 2 * padding
-    alto = text.get_height() + turno_text.get_height() + 3 * padding
+    ancho_fijo = 250  # Igual al ancho de la caja de las fichas amarillas
+    alto = text.get_height() + turno_text.get_height() + (mensaje_text.get_height() if mensaje_text else 0) + 4 * padding
 
-    fondo_rect = pygame.Rect(0, HEIGHT - alto, ancho, alto)
-    pygame.draw.rect(screen, (220, 220, 220), fondo_rect)  # Fondo gris claro
-    pygame.draw.rect(screen, NEGRO, fondo_rect, 2)         # Borde negro
+    fondo_rect = pygame.Rect(0, HEIGHT - alto, ancho_fijo, alto)
+    pygame.draw.rect(screen, (220, 220, 220), fondo_rect)
+    pygame.draw.rect(screen, NEGRO, fondo_rect, 2)
 
-    # Posiciones para los textos
-    text_pos = (padding, HEIGHT - alto + padding)
-    turno_pos = (padding, HEIGHT - alto + text.get_height() + 2 * padding)
-
-    screen.blit(text, text_pos)
-    screen.blit(turno_text, turno_pos)
+    y_actual = HEIGHT - alto + padding
+    screen.blit(text, (padding, y_actual))
+    y_actual += text.get_height() + padding
+    screen.blit(turno_text, (padding, y_actual))
+    y_actual += turno_text.get_height() + padding
+    if mensaje_text:
+        screen.blit(mensaje_text, (padding, y_actual))
 
     pygame.display.flip()
 
