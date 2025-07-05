@@ -133,17 +133,19 @@ def pos_en_camino(color, idx_ficha):
     idx = estado_fichas[color][idx_ficha]
     if idx == -1:
         return fichas[color][idx_ficha]
-    else:
-        pos = (inicio_camino[color] + idx) % len(camino)
-        # Si la ficha está en home path
-        if idx >= len(camino):
-            home_idx = idx - len(camino)
-            if home_idx < 5:
-                return home_paths[color][home_idx]
-            else:
-                # Centro (meta)
-                return (WIDTH // 2, HEIGHT // 2)
+    # El índice de entrada a home para cada color
+    entrada_home = (inicio_camino[color] + 51) % 52
+    if idx <= 51:
+        # Camino común
+        pos = (inicio_camino[color] + idx) % 52
         return camino[pos]
+    elif 52 <= idx <= 57:
+        # Home path propio
+        home_idx = idx - 52
+        return home_paths[color][home_idx]
+    else:
+        # Meta (centro)
+        return (WIDTH // 2, HEIGHT // 2)
 
 def seleccionar_ficha(mouse_pos, color):
     for idx, pos in enumerate([pos_en_casa(color, i) if estado_fichas[color][i] == -1 else pos_en_camino(color, i) for i in range(4)]):
@@ -267,7 +269,7 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE and dado_val == 0:
                 # Solo permite tirar si no hay dado pendiente
-                dado_val = random.randint(1, 6)
+                dado_val = 6#random.randint(1, 6)
                 if dado_val == 6:
                     lanzamientos_seguidos += 1
                     ultimo_seis = True
@@ -325,10 +327,24 @@ while running:
                     estado_fichas[color][idx] = 0
                 # Si la ficha está en el camino, avanza
                 elif estado_fichas[color][idx] >= 0:
-                    estado_fichas[color][idx] += dado_val
-                    # Si llega a home path
-                    if estado_fichas[color][idx] > len(camino) + 5:
-                        estado_fichas[color][idx] = len(camino) + 5  # No pasa del centro
+                    nuevo_idx = estado_fichas[color][idx] + dado_val
+                    entrada_home = 51  # Siempre 51 pasos para llegar a la entrada de home desde el inicio de cada color
+                    if estado_fichas[color][idx] <= 51 and nuevo_idx > 51:
+                        # Solo entra a home si está justo en la entrada de su color
+                        if ((inicio_camino[color] + estado_fichas[color][idx]) % 52) == ((inicio_camino[color] + 51) % 52):
+                            # Entra a home path propio
+                            estado_fichas[color][idx] = 52 + (nuevo_idx - 52)
+                            if estado_fichas[color][idx] > 57:
+                                estado_fichas[color][idx] = 57  # No pasa del centro
+                        else:
+                            # Si no es su entrada a home, sigue el camino común
+                            estado_fichas[color][idx] = (inicio_camino[color] + nuevo_idx) % 52
+                    else:
+                        # Si ya está en home path o camino común normal
+                        if nuevo_idx > 57:
+                            estado_fichas[color][idx] = 57  # No pasa del centro
+                        else:
+                            estado_fichas[color][idx] = nuevo_idx
 
                 # Control de turnos y lanzamientos
                 if dado_val == 6 and lanzamientos_seguidos < 3:
