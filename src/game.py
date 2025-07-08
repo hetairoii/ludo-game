@@ -71,14 +71,37 @@ for x in range(230, 10, -cell_size):  # 4 casillas horizontales
 camino.append((10, 300)) #entrada a home path rojo
 
 # --- Home paths (5 casillas por color) ---
-# ROJO (de la casilla de entrada a la meta)
-home_rojo = [(250 + i * cell_size, 270) for i in range(1, 6)]
-# VERDE
-home_verde = [(470, 250 - i * cell_size) for i in range(1, 6)]
-# AMARILLO
-home_amarillo = [(250 - i * cell_size, 470) for i in range(1, 6)]
-# AZUL
-home_azul = [(270, 250 + i * cell_size) for i in range(1, 6)]
+# ROJO: home path horizontal, cada ficha en una fila diferente (desplazamiento en Y)
+home_rojo = [
+    [(250 + i * cell_size, 230 + 0 * 30) for i in range(1, 6)],  # Ficha 0
+    [(250 + i * cell_size, 230 + 1 * 30) for i in range(1, 6)],  # Ficha 1
+    [(250 + i * cell_size, 230 + 2 * 30) for i in range(1, 6)],  # Ficha 2
+    [(250 + i * cell_size, 230 + 3 * 30) for i in range(1, 6)],  # Ficha 3
+]
+
+# VERDE: home path vertical, cada ficha en una columna diferente (desplazamiento en X)
+home_verde = [
+    [(470 + 0 * 30, 250 - i * cell_size) for i in range(1, 6)],  # Ficha 0
+    [(470 + 1 * 30, 250 - i * cell_size) for i in range(1, 6)],  # Ficha 1
+    [(470 + 2 * 30, 250 - i * cell_size) for i in range(1, 6)],  # Ficha 2
+    [(470 + 3 * 30, 250 - i * cell_size) for i in range(1, 6)],  # Ficha 3
+]
+
+# AMARILLO: home path horizontal, cada ficha en una fila diferente (desplazamiento en Y)
+home_amarillo = [
+    [(250 - i * cell_size, 470 + 0 * 30) for i in range(1, 6)],  # Ficha 0
+    [(250 - i * cell_size, 470 + 1 * 30) for i in range(1, 6)],  # Ficha 1
+    [(250 - i * cell_size, 470 + 2 * 30) for i in range(1, 6)],  # Ficha 2
+    [(250 - i * cell_size, 470 + 3 * 30) for i in range(1, 6)],  # Ficha 3
+]
+
+# AZUL: home path vertical, cada ficha en una columna diferente (desplazamiento en X)
+home_azul = [
+    [(270 - 0 * 30, 250 + i * cell_size) for i in range(1, 6)],  # Ficha 0
+    [(270 - 1 * 30, 250 + i * cell_size) for i in range(1, 6)],  # Ficha 1
+    [(270 - 2 * 30, 250 + i * cell_size) for i in range(1, 6)],  # Ficha 2
+    [(270 - 3 * 30, 250 + i * cell_size) for i in range(1, 6)],  # Ficha 3
+]
 
 # Añadir home paths al camino (en orden ROJO, VERDE, AMARILLO, AZUL)
 camino += home_rojo + home_verde + home_amarillo + home_azul
@@ -111,12 +134,12 @@ inicio_camino = {
     AMARILLO: 39
 }
 
-# Casillas de home (camino al centro) para cada color
+# Diccionario para acceder fácil por color y ficha
 home_paths = {
-    ROJO: [(250 + cell_size, 230 - i * cell_size) for i in range(1, 6)],
-    VERDE: [(350 + i * cell_size, 10 + cell_size) for i in range(1, 6)],
-    AZUL: [(350 - cell_size, 450 + i * cell_size) for i in range(1, 6)],
-    AMARILLO: [(130 - i * cell_size, 350 - cell_size) for i in range(1, 6)]
+    ROJO: home_rojo,
+    VERDE: home_verde,
+    AMARILLO: home_amarillo,
+    AZUL: home_azul
 }
 
 j_actual = 0
@@ -140,13 +163,59 @@ def pos_en_camino(color, idx_ficha):
         pos = (inicio_camino[color] + idx) % 52
         return camino[pos]
     elif 52 <= idx <= 57:
-        # Home path propio
+        # Home path propio de la ficha
         home_idx = idx - 52
-        print(home_paths[color][home_idx])
-        return home_paths[color][home_idx]
+        return home_paths[color][idx_ficha][home_idx]
     else:
         # Meta (centro)
         return (WIDTH // 2, HEIGHT // 2)
+
+def mover_ficha(color, idx, dado_val):
+    """Mueve la ficha y gestiona comer y entrada a home path."""
+    global estado_fichas
+
+    pos_actual = estado_fichas[color][idx]
+    if pos_actual == -1 and dado_val == 6:
+        # Sale de casa
+        estado_fichas[color][idx] = 0
+        return True
+
+    if pos_actual >= 0:
+        nuevo_idx = pos_actual + dado_val
+        # ¿Está en el camino común y va a entrar a home path?
+        if pos_actual <= 51 and nuevo_idx > 51:
+            # Solo entra a home path si está en la entrada de su color
+            if ((inicio_camino[color] + pos_actual) % 52) == ((inicio_camino[color] + 51) % 52):
+                # Entra a home path propio
+                estado_fichas[color][idx] = 52 + (nuevo_idx - 52)
+                if estado_fichas[color][idx] > 57:
+                    estado_fichas[color][idx] = 57  # No pasa del centro
+            else:
+                # Si no es su entrada a home, sigue el camino común
+                estado_fichas[color][idx] = (inicio_camino[color] + nuevo_idx) % 52
+        else:
+            # Si ya está en home path o camino común normal
+            if nuevo_idx > 57:
+                estado_fichas[color][idx] = 57  # No pasa del centro
+            else:
+                estado_fichas[color][idx] = nuevo_idx
+
+        # --- COMER FICHAS ---
+        # Solo se puede comer en el camino común (idx <= 51)
+        if estado_fichas[color][idx] <= 51:
+            pos_ficha = (inicio_camino[color] + estado_fichas[color][idx]) % 52
+            for otro_color in COLORES:
+                if otro_color == color:
+                    continue
+                for j in range(4):
+                    # Solo fichas en camino común
+                    if estado_fichas[otro_color][j] >= 0 and estado_fichas[otro_color][j] <= 51:
+                        pos_otro = (inicio_camino[otro_color] + estado_fichas[otro_color][j]) % 52
+                        if pos_ficha == pos_otro:
+                            # Comer: regresa la ficha comida a casa
+                            estado_fichas[otro_color][j] = -1
+
+    return True
 
 def seleccionar_ficha(mouse_pos, color):
     for idx, pos in enumerate([pos_en_casa(color, i) if estado_fichas[color][i] == -1 else pos_en_camino(color, i) for i in range(4)]):
@@ -274,7 +343,7 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE and dado_val == 0 and not mensaje_penalizacion:
                 # Solo permite tirar si no hay dado pendiente ni mensaje de penalización activo
-                dado_val = 6 # random.randint(1, 6)
+                dado_val = random.randint(1, 6)
                 if dado_val == 6:
                     lanzamientos_seguidos += 1
                     ultimo_seis = True
@@ -329,25 +398,7 @@ while running:
             elif event.key == pygame.K_RETURN and ficha_seleccionada is not None and dado_val > 0 and not mensaje_penalizacion:
                 color = get_color_turno()
                 idx = ficha_seleccionada
-                # Si la ficha está en casa y saca 6, sale
-                if estado_fichas[color][idx] == -1 and dado_val == 6:
-                    estado_fichas[color][idx] = 0
-                # Si la ficha está en el camino, avanza
-                elif estado_fichas[color][idx] >= 0:
-                    nuevo_idx = estado_fichas[color][idx] + dado_val
-                    entrada_home = 51
-                    if estado_fichas[color][idx] <= 51 and nuevo_idx > 51:
-                        if ((inicio_camino[color] + estado_fichas[color][idx]) % 52) == ((inicio_camino[color] + 51) % 52):
-                            estado_fichas[color][idx] = 52 + (nuevo_idx - 52)
-                            if estado_fichas[color][idx] > 57:
-                                estado_fichas[color][idx] = 57
-                        else:
-                            estado_fichas[color][idx] = (inicio_camino[color] + nuevo_idx) % 52
-                    else:
-                        if nuevo_idx > 57:
-                            estado_fichas[color][idx] = 57
-                        else:
-                            estado_fichas[color][idx] = nuevo_idx
+                mover_ficha(color, idx, dado_val)
 
                 # Control de turnos y lanzamientos
                 if dado_val == 6 and lanzamientos_seguidos < 3:
